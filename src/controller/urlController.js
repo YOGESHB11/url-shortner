@@ -44,11 +44,18 @@ const urlShortner = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid URL" })
         }
         req.body.longUrl = longUrl.trim()
+        
+        //CHECKING URL DOCUMENT FROM CACHE
+        const cachedUrl = await GET_ASYNC(`${longUrl}`)
+        const parseUrl = JSON.parse(cachedUrl)
+        if (parseUrl) {
+            return res.status(200).send({ status : true ,message: "Data is present in cache", data: parseUrl })
+        }
 
         //CHECKING IF URL IS ALREADY SHORTENED
         let findUrl = await urlModel.findOne({ longUrl: longUrl }).select({ longUrl: 1, urlCode: 1, shortUrl: 1, _id: 0 });
         if (findUrl) {
-            return res.status(200).send({ message: "This URL has already being shortened", data: findUrl })
+            return res.status(200).send({ status : true ,message: "This URL has already being shortened", data: findUrl })
         }
 
         //GENERATING URL CODE FOR LONG URLs
@@ -67,7 +74,7 @@ const urlShortner = async function (req, res) {
         const data = await urlModel.create(req.body)
 
         //SET THE DATA IN CACHE MEMORY
-        await SET_ASYNC(`${urlCode}`, JSON.stringify(data));
+        await SET_ASYNC(`${longUrl}`, JSON.stringify(req.body));
 
         //RESPONSE BODY
         return res.status(201).send({ status: true, data: req.body })
